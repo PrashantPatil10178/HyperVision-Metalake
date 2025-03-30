@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  appwriteId    String   @unique  // User ID from Appwrite
+  email         String   
+   instanceId    String? 
+  createdAt     DateTime @default(now())
+  credentials   Credential[]
+  buckets       Bucket[]
+  queryHistory  QueryHistory[]
+
+}
+
+model Credential {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String   
+  accessKey String   
+  secretKey String   
+  createdAt DateTime @default(now())
+}
+
+model Bucket {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String  
+  provider  String   // ENUM Typescript vaparlay
+  format    Format?   // same here
+  metadata  Json?     // Latest metadata snapshot
+  tables      Table[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Table {
+  id          String    @id @default(uuid())
+  name        String
+  bucket      Bucket    @relation(fields: [bucketId], references: [id])
+  bucketId    String
+  metadata    Json      // Store Iceberg/Hudi/Delta metadata as JSON
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+model QueryHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String   
+  result    Json     
+  createdAt DateTime @default(now())
+}
+enum Provider {
+  AWS    @map("aws")
+  AZURE  @map("azure")
+  GCP    @map("gcp")
+  MINIO  @map("minio")
+}
+
+enum Format {
+  ICEBERG @map("iceberg")
+  HUDI    @map("hudi")
+  DELTA   @map("delta")
+}
